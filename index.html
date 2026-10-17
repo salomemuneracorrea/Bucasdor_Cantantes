@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!-- ===========================================================
+     BUSCADOR DE CANTANTES - Página principal (index.html)
+     Aquí está la ESTRUCTURA de la página: el título, la caja de
+     búsqueda y los espacios vacíos donde JavaScript (script.js)
+     va a poner los resultados. Los colores y el diseño están en
+     style.css.
+     =========================================================== -->
+<html lang="es">
+<head>
+  <!-- "charset" permite usar tildes y la ñ sin que se vean mal -->
+  <meta charset="UTF-8">
+  <!-- Esta línea hace que la página se adapte al tamaño del celular -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buscador de Cantantes</title>
+  <meta name="description" content="Busca cualquier cantante y conoce su foto, biografía, datos y canciones populares.">
+
+  <!-- Tipografía "Poppins" de Google Fonts (solo cambia cómo se ven las letras) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Conectamos la hoja de estilos (el diseño de la página) -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== ENCABEZADO: título y buscador ===== -->
+  <header class="encabezado">
+    <h1 class="titulo">🎤 Buscador de Cantantes</h1>
+    <p class="subtitulo">Escribe el nombre de un cantante y descubre su historia y sus canciones</p>
+
+    <!-- Usamos un formulario (<form>) para que al presionar Enter también se busque -->
+    <form id="formulario" class="buscador">
+      <!-- La etiqueta (label) es para lectores de pantalla; está oculta visualmente -->
+      <label for="caja-busqueda" class="solo-lector">Nombre del cantante</label>
+      <input
+        type="text"
+        id="caja-busqueda"
+        class="caja-busqueda"
+        placeholder="Ej: Shakira, Karol G, Juanes..."
+        autocomplete="off"
+        required
+      >
+      <button type="submit" class="boton-buscar">Buscar</button>
+    </form>
+  </header>
+
+  <!-- ===== ZONA PRINCIPAL ===== -->
+  <main class="contenido">
+
+    <!-- Aquí mostramos "Buscando..." o los mensajes de error -->
+    <p id="mensaje" class="mensaje" aria-live="polite"></p>
+
+    <!-- Contenedor de resultados. Empieza oculto (atributo "hidden")
+         y JavaScript lo muestra cuando hay algo que enseñar. -->
+    <section id="resultados" class="resultados" hidden>
+
+      <!-- 1. Tarjeta principal: foto, nombre y descripción corta -->
+      <article id="tarjeta-perfil" class="tarjeta tarjeta-perfil"></article>
+
+      <!-- 2. Biografía (resumen de Wikipedia) -->
+      <article id="tarjeta-biografia" class="tarjeta"></article>
+
+      <!-- 3. Datos rápidos (género, país, nacimiento...) -->
+      <article id="tarjeta-datos" class="tarjeta"></article>
+
+      <!-- 4. Canciones populares (iTunes) -->
+      <article id="tarjeta-canciones" class="tarjeta tarjeta-canciones"></article>
+    </section>
+  </main>
+
+  <!-- ===== PIE DE PÁGINA ===== -->
+  <footer class="pie">
+    Información de <a href="https://es.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>,
+    <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> e
+    <a href="https://music.apple.com" target="_blank" rel="noopener">iTunes</a>.
+  </footer>
+
+  <!-- El JavaScript va al final para que la página ya esté cargada cuando se ejecute -->
+  <script src="script.js"></script>
+</body>
+</html>

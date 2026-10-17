@@ -1,0 +1,347 @@
+/* ===========================================================
+   BUSCADOR DE CANTANTES - Estilos (style.css)
+   Aquí está TODO el diseño: colores, tamaños, espacios y cómo
+   se acomodan las tarjetas en celular, tablet y computador.
+   =========================================================== */
+
+/* ---------- 1. Variables de colores ----------
+   Guardamos los colores en "variables" para poder cambiarlos
+   en un solo lugar. Se usan así: var(--morado)            */
+:root {
+  --morado: #6c3ce1;
+  --rosado: #e83e8c;
+  --fondo: #f4f2fb;
+  --tarjeta: #ffffff;
+  --texto: #1f1b2e;
+  --texto-suave: #5e5873;
+  --borde: #e6e1f5;
+  --sombra: 0 8px 24px rgba(60, 30, 140, 0.10);
+  --radio: 18px; /* qué tan redondeadas son las esquinas */
+}
+
+/* ---------- 2. Reglas generales ---------- */
+
+/* box-sizing hace que el borde y el relleno cuenten dentro del ancho
+   (así es más fácil calcular tamaños) */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Poppins", Arial, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  line-height: 1.6;
+}
+
+/* Las imágenes nunca se salen de su caja */
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: var(--morado);
+}
+
+/* Oculta un elemento a la vista pero lo deja para lectores de pantalla */
+.solo-lector {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* ---------- 3. Encabezado y buscador ---------- */
+.encabezado {
+  /* Fondo con degradado de morado a rosado */
+  background: linear-gradient(135deg, var(--morado), var(--rosado));
+  color: #fff;
+  text-align: center;
+  padding: 48px 16px 64px;
+}
+
+.titulo {
+  margin: 0;
+  /* clamp(mínimo, ideal, máximo): el título crece con la pantalla */
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+}
+
+.subtitulo {
+  margin: 8px 0 24px;
+  opacity: 0.9;
+}
+
+/* La caja de texto y el botón van uno al lado del otro */
+.buscador {
+  display: flex;
+  gap: 8px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.caja-busqueda {
+  flex: 1; /* ocupa todo el espacio que sobre */
+  padding: 14px 18px;
+  border: none;
+  border-radius: 999px; /* bordes totalmente redondos */
+  font: inherit;
+  font-size: 1rem;
+  outline: none;
+}
+
+/* Al hacer clic en la caja aparece un borde suave */
+.caja-busqueda:focus {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.45);
+}
+
+.boton-buscar {
+  padding: 14px 26px;
+  border: none;
+  border-radius: 999px;
+  background: var(--texto);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.boton-buscar:hover {
+  background: #000;
+  transform: translateY(-2px); /* se levanta un poquito */
+}
+
+/* ---------- 4. Zona de contenido y mensajes ---------- */
+.contenido {
+  max-width: 1100px;
+  margin: -32px auto 0; /* sube un poco para "montarse" sobre el encabezado */
+  padding: 0 16px 48px;
+}
+
+.mensaje {
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--texto-suave);
+  background: var(--tarjeta);
+  border-radius: var(--radio);
+  padding: 20px;
+  box-shadow: var(--sombra);
+}
+
+/* Si el mensaje está vacío, no se muestra la cajita blanca */
+.mensaje:empty {
+  display: none;
+}
+
+/* ---------- 5. Organización de las tarjetas (GRID) ----------
+   En celular: una sola columna (una tarjeta debajo de otra).  */
+.resultados {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.tarjeta {
+  background: var(--tarjeta);
+  border-radius: var(--radio);
+  padding: 24px;
+  box-shadow: var(--sombra);
+}
+
+.tarjeta h2 {
+  margin-top: 0;
+  font-size: 1.25rem;
+  color: var(--morado);
+}
+
+/* Una tarjeta vacía no ocupa espacio */
+.tarjeta:empty {
+  display: none;
+}
+
+/* ---------- 6. Tarjeta de perfil (foto + nombre) ---------- */
+.tarjeta-perfil {
+  display: flex;
+  flex-direction: column; /* en celular: foto arriba, texto abajo */
+  align-items: center;
+  text-align: center;
+  gap: 20px;
+}
+
+.foto-cantante {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1 / 1;  /* la foto siempre es cuadrada */
+  object-fit: cover;    /* recorta sin deformar la imagen */
+  object-position: top; /* prioriza la cara, que suele estar arriba */
+  border-radius: var(--radio);
+}
+
+.nombre-cantante {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  line-height: 1.2;
+}
+
+.descripcion-cantante {
+  margin: 8px 0 0;
+  color: var(--texto-suave);
+  font-size: 1.1rem;
+}
+
+/* ---------- 7. Datos rápidos (lista de dato: valor) ---------- */
+.lista-datos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lista-datos li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.lista-datos li:last-child {
+  border-bottom: none;
+}
+
+.lista-datos strong {
+  color: var(--texto-suave);
+  font-weight: 600;
+}
+
+.lista-datos span {
+  text-align: right;
+}
+
+/* ---------- 8. Canciones ---------- */
+.lista-canciones {
+  display: grid;
+  grid-template-columns: 1fr; /* celular: una canción por fila */
+  gap: 16px;
+}
+
+.cancion {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+}
+
+.portada {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0; /* la portada no se encoge */
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.info-cancion {
+  min-width: 0; /* permite que los textos largos se corten bien */
+  flex: 1;
+}
+
+.nombre-cancion {
+  margin: 0;
+  font-weight: 600;
+}
+
+.detalle-cancion {
+  margin: 2px 0 8px;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+/* El reproductor de audio ocupa todo el ancho disponible */
+.info-cancion audio {
+  width: 100%;
+  height: 36px;
+}
+
+.sin-vista-previa {
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  font-style: italic;
+}
+
+/* Botón-enlace "Ver más en Wikipedia" */
+.enlace-boton {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--morado);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.enlace-boton:hover {
+  background: var(--rosado);
+}
+
+/* ---------- 9. Pie de página ---------- */
+.pie {
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+/* ===========================================================
+   10. DISEÑO RESPONSIVE (se adapta al tamaño de la pantalla)
+   "@media (min-width: X)" significa: "si la pantalla mide X
+   o más de ancho, aplica estas reglas".
+   =========================================================== */
+
+/* TABLET (desde 600px): las canciones van en 2 columnas */
+@media (min-width: 600px) {
+  .lista-canciones {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* COMPUTADOR (desde 900px): las tarjetas se organizan en columnas */
+@media (min-width: 900px) {
+  .resultados {
+    grid-template-columns: 2fr 1fr; /* biografía más ancha que los datos */
+  }
+
+  /* El perfil y las canciones ocupan las dos columnas completas */
+  .tarjeta-perfil,
+  .tarjeta-canciones {
+    grid-column: 1 / -1;
+  }
+
+  /* El perfil se pone de lado: foto a la izquierda y texto a la derecha */
+  .tarjeta-perfil {
+    flex-direction: row;
+    text-align: left;
+  }
+
+  .foto-cantante {
+    max-width: 280px;
+  }
+}
+
+/* CELULAR PEQUEÑO (hasta 420px): el botón va debajo de la caja */
+@media (max-width: 420px) {
+  .buscador {
+    flex-direction: column;
+  }
+}
+
+/* Texto pequeño junto a un título, ej: "(según iTunes)" */
+.tarjeta h2 small {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--texto-suave);
+}
