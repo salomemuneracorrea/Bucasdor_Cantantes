@@ -61,7 +61,10 @@ async function buscarCantante(nombre) {
   history.replaceState(null, "", "?q=" + encodeURIComponent(nombre));
 
   // Pedimos Wikipedia e iTunes AL MISMO TIEMPO (así es más rápido).
-  // Cada función devuelve "null" si falla, así que una no rompe a la otra.
+  // Cada función devuelve "null" (o una lista vacía) si falla,
+  // así que una no rompe a la otra.
+  // OJO: buscarEnWikipedia solo devuelve artículos de MÚSICOS o BANDAS;
+  // si encuentra, por ejemplo, a un futbolista, lo descarta.
   const [wikipedia, canciones] = await Promise.all([
     buscarEnWikipedia(nombre),
     buscarCanciones(nombre),
@@ -73,11 +76,17 @@ async function buscarCantante(nombre) {
     return; // "return" termina la función aquí
   }
 
-  // Los datos rápidos necesitan el código de Wikidata que trae Wikipedia.
+  // Los datos rápidos necesitan la información de Wikidata que ya trajimos.
   const datos = await buscarDatosRapidos(wikipedia);
 
-  // Ya tenemos todo: borramos "Buscando..." y dibujamos las tarjetas.
-  mensaje.textContent = "";
+  // Ya tenemos todo: quitamos "Buscando..." y dibujamos las tarjetas.
+  // Si solo encontramos canciones (iTunes) pero no su artículo en Wikipedia,
+  // dejamos un aviso corto en lugar de mostrar información equivocada.
+  if (wikipedia === null) {
+    mensaje.textContent = "ℹ️ No encontramos la biografía de este artista.";
+  } else {
+    mensaje.textContent = "";
+  }
   mostrarPerfil(nombre, wikipedia, canciones);
   mostrarBiografia(wikipedia);
   mostrarDatos(datos, canciones);
@@ -91,7 +100,20 @@ async function buscarCantante(nombre) {
    =========================================================== */
 
 /* --- Wikipedia: foto, descripción y resumen ---
-   Primero probamos en español; si no aparece, en inglés. */
+   Solo aceptamos artículos de músicos o bandas. El orden de búsqueda es:
+     1. El artículo que mejor coincide con el nombre, en español.
+     2. Búsquedas alternativas en español: "NOMBRE cantante", "NOMBRE rapero"...
+     3. Lo mismo en inglés ("NOMBRE singer", "NOMBRE rapper"...).
+   Nos quedamos con el PRIMER artículo que sí sea de música.
+   Ejemplo: "Pirlo" encuentra primero al futbolista Andrea Pirlo; como no es
+   músico, lo descartamos y seguimos buscando. */
+
+// Palabras que usamos para buscar alternativas en cada idioma.
+const PALABRAS_ALTERNATIVAS = {
+  es: ["cantante", "rapero", "músico", "banda"],
+  en: ["singer", "rapper", "musician", "band"],
+};
+
 async function buscarEnWikipedia(nombre) {
   const idiomas = ["es", "en"];
 
@@ -99,24 +121,18 @@ async function buscarEnWikipedia(nombre) {
     // "try / catch": si algo falla dentro del "try", saltamos al "catch"
     // en vez de que la página se rompa.
     try {
-      // a) Buscamos el título exacto del artículo (así "shakira" encuentra "Shakira").
+      // 1. El artículo que mejor coincide con lo escrito (así "shakira" encuentra "Shakira").
       const titulo = await buscarTituloWikipedia(nombre, idioma);
-      if (titulo === null) {
-        continue; // "continue" pasa al siguiente idioma
+      if (titulo !== null) {
+        const resumen = await probarArticulo(titulo, idioma, nombre);
+        if (resumen !== null) {
+          return resumen; // ¡encontramos un artículo de música!
+        }
       }
 
-      // b) Pedimos el resumen del artículo.
-      let resumen = await pedirResumen(titulo, idioma);
-
-      // c) Si es una página de desambiguación ("Juanes puede referirse a..."),
-      //    probamos con el mismo nombre + "(cantante)" o "(singer)".
-      if (resumen !== null && resumen.type === "disambiguation") {
-        const extra = idioma === "es" ? " (cantante)" : " (singer)";
-        resumen = await pedirResumen(titulo + extra, idioma);
-      }
-
-      if (resumen !== null && resumen.type === "standard") {
-        resumen.idioma = idioma; // recordamos en qué idioma lo encontramos
+      // 2. Si no era de música, probamos las búsquedas alternativas.
+      const resumen = await buscarAlternativas(nombre, idioma);
+      if (resumen !== null) {
         return resumen;
       }
     } catch (error) {
@@ -124,7 +140,70 @@ async function buscarEnWikipedia(nombre) {
     }
   }
 
-  return null; // no se encontró en ningún idioma
+  return null; // no encontramos ningún artículo de música en ningún idioma
+}
+
+/* Busca "NOMBRE cantante", "NOMBRE rapero", etc. con el buscador de Wikipedia
+   y prueba cada resultado hasta encontrar uno que sea de música. */
+async function buscarAlternativas(nombre, idioma) {
+  const yaProbados = []; // para no revisar dos veces el mismo artículo
+
+  for (const palabra of PALABRAS_ALTERNATIVAS[idioma]) {
+    const url = "https://" + idioma + ".wikipedia.org/w/api.php" +
+      "?action=query&list=search&srlimit=5&format=json&origin=*" +
+      "&srsearch=" + encodeURIComponent(nombre + " " + palabra);
+    const respuesta = await fetch(url);
+    const datos = await respuesta.json();
+
+    for (const resultado of datos.query.search) {
+      const titulo = resultado.title;
+      if (yaProbados.includes(titulo)) {
+        continue;
+      }
+      yaProbados.push(titulo);
+
+      const resumen = await probarArticulo(titulo, idioma, nombre);
+      if (resumen !== null) {
+        return resumen;
+      }
+    }
+  }
+  return null;
+}
+
+/* Revisa UN artículo: devuelve su resumen si es de un músico o banda,
+   o "null" si no sirve. */
+async function probarArticulo(titulo, idioma, nombre) {
+  // El título debe contener el nombre buscado como PALABRA COMPLETA. Así:
+  //  - al buscar "Pirlo rapero" no aceptamos el artículo de OTRO rapero ("Blessd");
+  //  - al buscar "Messi" no aceptamos a la cantante "Danielle Messia".
+  if (!contienePalabras(titulo, nombre)) {
+    return null;
+  }
+
+  let resumen = await pedirResumen(titulo, idioma);
+
+  // Si es una página de desambiguación ("Juanes puede referirse a..."),
+  // probamos con el mismo nombre + "(cantante)" o "(singer)".
+  if (resumen !== null && resumen.type === "disambiguation") {
+    const extra = idioma === "es" ? " (cantante)" : " (singer)";
+    resumen = await pedirResumen(titulo + extra, idioma);
+  }
+
+  // Tiene que ser un artículo normal y tener su código de Wikidata.
+  if (resumen === null || resumen.type !== "standard" || !resumen.wikibase_item) {
+    return null;
+  }
+
+  // Revisamos en Wikidata si es del mundo de la música.
+  const propiedades = await pedirPropiedades(resumen.wikibase_item);
+  if (!(await esArtistaMusical(propiedades))) {
+    return null; // ej: un futbolista o un actor
+  }
+
+  resumen.idioma = idioma;           // recordamos en qué idioma lo encontramos
+  resumen.propiedades = propiedades; // y guardamos sus datos de Wikidata para después
+  return resumen;
 }
 
 /* Busca el título del artículo que mejor coincide con lo escrito. */
@@ -167,15 +246,12 @@ async function buscarCanciones(nombre) {
     const respuesta = await fetch(url);
     const datos = await respuesta.json();
 
-    // Nos quedamos solo con las canciones cuyo artista se parece a lo buscado.
-    let canciones = datos.results.filter(function (cancion) {
-      return sinTildes(cancion.artistName).includes(sinTildes(nombre));
+    // Nos quedamos SOLO con las canciones de ese artista (o en las que colabora).
+    // Si no queda ninguna, devolvemos una lista vacía: es mejor no mostrar
+    // canciones que mostrar las de otro artista.
+    const canciones = datos.results.filter(function (cancion) {
+      return coincideArtista(cancion.artistName, nombre);
     });
-
-    // Si el filtro dejó la lista vacía, usamos los resultados tal cual.
-    if (canciones.length === 0) {
-      canciones = datos.results;
-    }
 
     // Quitamos canciones repetidas (a veces aparece la misma en varios álbumes).
     const nombresVistos = [];
@@ -207,12 +283,8 @@ async function buscarDatosRapidos(wikipedia) {
   }
 
   try {
-    const id = wikipedia.wikibase_item;
-    const url = "https://www.wikidata.org/w/api.php?action=wbgetentities&props=claims&format=json&origin=*" +
-      "&ids=" + id;
-    const respuesta = await fetch(url);
-    const json = await respuesta.json();
-    const propiedades = json.entities[id].claims;
+    // Ya pedimos estos datos al revisar si era músico (en probarArticulo).
+    const propiedades = wikipedia.propiedades;
 
     // En Wikidata cada dato tiene un código:
     //   P1477 = nombre real        P569 = fecha de nacimiento
@@ -221,7 +293,12 @@ async function buscarDatosRapidos(wikipedia) {
     const nombreReal = leerValores(propiedades, "P1477")[0];
     const fecha = leerValores(propiedades, "P569")[0];
     const lugar = leerValores(propiedades, "P19")[0];
-    const paises = leerValores(propiedades, "P27"); // ej: Shakira es de Colombia y España
+    // País: para personas es su nacionalidad (P27; Shakira es de Colombia y España).
+    // Las bandas no tienen nacionalidad, sino "país de origen" (P495).
+    let paises = leerValores(propiedades, "P27");
+    if (paises.length === 0) {
+      paises = leerValores(propiedades, "P495");
+    }
     const inicio = leerValores(propiedades, "P2031")[0];
 
     if (nombreReal) {
@@ -256,6 +333,63 @@ async function buscarDatosRapidos(wikipedia) {
   }
 
   return datos;
+}
+
+/* Pide a Wikidata todos los datos ("propiedades") de un artista o banda.
+   Ejemplo de código: "Q34424" es Shakira. */
+async function pedirPropiedades(codigo) {
+  const url = "https://www.wikidata.org/w/api.php?action=wbgetentities&props=claims&format=json&origin=*" +
+    "&ids=" + codigo;
+  const respuesta = await fetch(url);
+  const json = await respuesta.json();
+  return json.entities[codigo].claims;
+}
+
+/* Palabras que indican que algo es del mundo de la música.
+   Las escribimos sin tildes y en minúscula, en español y en inglés. */
+const PALABRAS_MUSICALES = [
+  "cantante", "cantautor", "cantautora", "singer", "songwriter", "vocalista", "vocalist",
+  "musico", "musica", "musical", "musician", "music",
+  "rapero", "rapera", "rapper", "trapero",
+  "compositor", "compositora", "composer",
+  "dj", "disc jockey", "productor discografico", "record producer",
+  "banda", "band", "duo", "trio", "orquesta", "orchestra", "grupo de rock", "boy band", "girl group",
+  "guitarrista", "guitarist", "pianista", "pianist", "baterista", "drummer", "bajista", "bassist",
+];
+
+/* ¿Es un artista musical? Revisamos dos datos de Wikidata:
+     P106 = ocupación    (ej: "cantante", "rapero", "futbolista")
+     P31  = qué tipo de cosa es (ej: "grupo de rock", "ser humano")
+   Leemos el NOMBRE de cada ocupación/tipo y vemos si contiene alguna
+   palabra musical. Así también funciona con "cantante de pop" o
+   "grupo de rock", sin tener que conocer todos los códigos. */
+async function esArtistaMusical(propiedades) {
+  const codigos = [];
+  for (const valor of leerValores(propiedades, "P106").concat(leerValores(propiedades, "P31"))) {
+    codigos.push(valor.id);
+  }
+  if (codigos.length === 0) {
+    return false;
+  }
+
+  // Pedimos los nombres en español y en inglés de esos códigos.
+  const url = "https://www.wikidata.org/w/api.php?action=wbgetentities&props=labels&languages=es|en&format=json&origin=*" +
+    "&ids=" + codigos.slice(0, 50).join("|"); // Wikidata acepta máximo 50 a la vez
+  const respuesta = await fetch(url);
+  const json = await respuesta.json();
+
+  for (const codigo in json.entities) {
+    const etiquetas = json.entities[codigo].labels || {};
+    for (const idioma in etiquetas) {
+      // Comparamos palabras completas: "band" no debe coincidir con "husband".
+      for (const palabra of PALABRAS_MUSICALES) {
+        if (contienePalabras(etiquetas[idioma].value, palabra)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 /* Lee todos los valores de una propiedad de Wikidata.
@@ -306,8 +440,15 @@ function mostrarPerfil(nombreBuscado, wikipedia, canciones) {
   let nombre = nombreBuscado;
   if (wikipedia !== null) {
     nombre = wikipedia.title;
-  } else if (canciones.length > 0) {
-    nombre = canciones[0].artistName;
+  } else {
+    // Sin Wikipedia, tomamos el nombre tal como lo escribe iTunes, pero solo
+    // de una canción donde el artista esté SOLO (no "Feid & Pirlo").
+    for (const cancion of canciones) {
+      if (sinTildes(cancion.artistName) === sinTildes(nombreBuscado)) {
+        nombre = cancion.artistName;
+        break; // "break" sale del ciclo: ya lo encontramos
+      }
+    }
   }
 
   // Descripción corta (ej: "cantante colombiana").
@@ -441,6 +582,34 @@ function escapar(texto) {
 /* Quita tildes y pasa a minúsculas: "Óscar" -> "oscar". Sirve para comparar nombres. */
 function sinTildes(texto) {
   return (texto || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+/* ¿El "texto" contiene la "búsqueda" como palabras completas?
+   Ejemplos: ("Andrea Pirlo", "pirlo") -> sí
+             ("Danielle Messia", "messi") -> no (es parte de otra palabra)
+   Truco: dejamos solo letras y números separados por un espacio y
+   ponemos espacios a los lados, así " messi " no aparece en " danielle messia ". */
+function contienePalabras(texto, busqueda) {
+  const limpiar = function (t) {
+    return " " + sinTildes(t).replace(/[^a-z0-9]+/g, " ").trim() + " ";
+  };
+  return limpiar(texto).includes(limpiar(busqueda));
+}
+
+/* ¿El artista de una canción de iTunes es el que buscamos?
+   iTunes escribe las colaboraciones así: "Feid, El Americano 4KT & Pirlo".
+   Separamos por comas, "&", "feat", " x " e " y ", y el nombre buscado
+   debe ser EXACTAMENTE uno de los artistas.
+   Así "Queen" coincide con "Queen" pero NO con "Queen Latifah". */
+function coincideArtista(nombreArtista, nombreBuscado) {
+  const buscado = sinTildes(nombreBuscado).trim();
+  const artistas = sinTildes(nombreArtista).split(/,|&|\bfeat\.?|\bft\.?|\sx\s|\sy\s|\sand\s/);
+  for (const artista of artistas) {
+    if (artista.trim() === buscado) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /* Pone la primera letra en mayúscula: "cantante colombiana" -> "Cantante colombiana". */

@@ -9,6 +9,8 @@ Página web para buscar cualquier cantante y ver, en un solo lugar:
 
 Se puede buscar con el botón **Buscar** o presionando **Enter**. Si una de las fuentes de información falla, la página muestra lo que sí encontró.
 
+**Solo muestra artistas musicales** (cantantes, raperos, músicos, DJ, bandas…). Antes de usar un artículo de Wikipedia, revisa en Wikidata su ocupación o tipo; si no es de la música (por ejemplo, el futbolista Andrea Pirlo), busca alternativas como "NOMBRE cantante" o "NOMBRE rapero". Si solo iTunes conoce al artista, muestra sus canciones con el aviso "No encontramos la biografía de este artista". Las canciones siempre son del artista buscado (solo o en colaboraciones).
+
 👉 **Página publicada:** https://samuelalvaradoc.github.io/Salome-buscador/
 
 También se puede abrir una búsqueda directamente con un enlace, por ejemplo:
