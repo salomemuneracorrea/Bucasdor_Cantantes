@@ -734,14 +734,38 @@ function mostrarBiografia(wikipedia, introduccion) {
     ? `<p class="sin-vista-previa">No encontramos el artículo en español; esta biografía está en inglés.</p>`
     : "";
 
+  // Para que no quede tan larga, mostramos solo los primeros párrafos.
+  // El resto queda escondido y aparece con el botón "Leer más".
+  const PARRAFOS_VISIBLES = 2;
+  const visibles = parrafos.slice(0, PARRAFOS_VISIBLES);
+  const ocultos = parrafos.slice(PARRAFOS_VISIBLES);
+
   let html = `<h2>📖 Biografía</h2>`;
-  for (const parrafo of parrafos) {
+  for (const parrafo of visibles) {
     html += `<p>${escapar(parrafo)}</p>`;
+  }
+  if (ocultos.length > 0) {
+    html += `<div id="biografia-resto" hidden>`;
+    for (const parrafo of ocultos) {
+      html += `<p>${escapar(parrafo)}</p>`;
+    }
+    html += `</div>
+      <button type="button" id="boton-leer-mas" class="boton-leer-mas">Leer más ▾</button>`;
   }
   html += `${aviso}
     <a class="enlace-boton" href="${enlace}" target="_blank" rel="noopener">Ver más en Wikipedia</a>`;
 
   tarjetaBiografia.innerHTML = html;
+
+  // El botón muestra u oculta los párrafos escondidos.
+  const boton = document.getElementById("boton-leer-mas");
+  if (boton) {
+    boton.addEventListener("click", function () {
+      const resto = document.getElementById("biografia-resto");
+      resto.hidden = !resto.hidden;
+      boton.textContent = resto.hidden ? "Leer más ▾" : "Leer menos ▴";
+    });
+  }
 }
 
 /* Tarjeta 3: datos personales (solo los que existan) */

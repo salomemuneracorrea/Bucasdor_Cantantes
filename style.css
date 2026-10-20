@@ -288,6 +288,23 @@ a {
   background: var(--rosado);
 }
 
+/* Botón "Leer más" de la biografía: parece un enlace, sin fondo */
+.boton-leer-mas {
+  display: block;
+  margin: 0 0 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--morado);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton-leer-mas:hover {
+  color: var(--rosado);
+}
+
 /* ---------- 8b. Premios, redes y álbumes ---------- */
 .lista-premios {
   list-style: none;
