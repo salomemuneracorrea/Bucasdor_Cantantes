@@ -9,7 +9,7 @@ Página web para buscar cualquier cantante y ver, en un solo lugar:
 - **Datos personales:** nombre real, fecha de nacimiento con su edad, lugar de nacimiento, fecha de fallecimiento (si aplica) y nacionalidad.
 - **Carrera:** géneros musicales, instrumentos, discográficas y desde qué año está activo.
 - **Premios:** hasta 5, primero los más conocidos (Grammy, Billboard, MTV…), con el año.
-- **Canciones populares:** 5 canciones con la portada del álbum, el nombre del álbum, el año y una vista previa de audio de 30 segundos.
+- **Canciones populares:** 6 canciones con la portada del álbum, el nombre del álbum, el año y una vista previa de audio de 30 segundos.
 - **Álbumes:** unos 6 álbumes con portada, nombre y año.
 
 Además:

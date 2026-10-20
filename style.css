@@ -209,16 +209,55 @@ a {
   display: grid;
   grid-template-columns: 1fr;
   gap: 20px;
-  /* Cada tarjeta mide lo que necesita (no se estira para igualar a la
-     de al lado y quedar con espacio en blanco) */
-  align-items: start;
+  /* Las tarjetas de una misma fila se estiran hasta la misma altura,
+     así no quedan huecos debajo de la más corta */
+  align-items: stretch;
 }
 
 .tarjeta {
+  height: 100%; /* ocupa todo el alto de su fila */
   background: var(--tarjeta);
   border-radius: var(--radio);
   padding: 24px;
   box-shadow: var(--sombra);
+}
+
+/* Tarjetas que van de a dos (biografía | datos y carrera | premios).
+   Su contenido va en columna para poder repartir el espacio que sobre
+   cuando la tarjeta de al lado es más alta.
+   ":not(:empty)" evita mostrar las tarjetas vacías (ver .tarjeta:empty). */
+.tarjeta-columna:not(:empty) {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Las listas ocupan el alto que sobre y separan sus filas por igual,
+   en vez de quedar todas pegadas arriba */
+.tarjeta-columna .lista-datos,
+.tarjeta-columna .lista-premios {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+}
+
+/* En una columna flexible los márgenes de arriba y de abajo de los
+   párrafos ya no se juntan (se sumarían y quedaría el doble de espacio);
+   por eso dejamos solo el de abajo. */
+.tarjeta-columna p {
+  margin-top: 0;
+}
+
+/* En la biografía, el botón "Ver más en Wikipedia" baja hasta el final
+   de la tarjeta si sobra espacio */
+.tarjeta-columna .enlace-boton {
+  margin-top: auto;
+  align-self: flex-start; /* que no se estire a todo el ancho */
+}
+
+/* "Leer más" se queda a la izquierda, como antes */
+.tarjeta-columna .boton-leer-mas {
+  align-self: flex-start;
 }
 
 .tarjeta h2 {

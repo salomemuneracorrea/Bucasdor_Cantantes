@@ -323,7 +323,8 @@ async function pedirSugerencias(texto) {
 async function buscarCanciones(nombre) {
   try {
     // "attribute=artistTerm" busca por nombre de artista.
-    // Pedimos 25 para poder quitar repetidas y quedarnos con 5.
+    // Pedimos 25 para poder quitar repetidas y quedarnos con 6
+    // (6 llenan la cuadrícula de 2 columnas sin dejar una sola al final).
     const url = "https://itunes.apple.com/search?entity=song&attribute=artistTerm&limit=25" +
       "&term=" + encodeURIComponent(nombre);
 
@@ -348,8 +349,8 @@ async function buscarCanciones(nombre) {
       }
     }
 
-    // .slice(0, 5) toma solo las primeras 5.
-    return unicas.slice(0, 5);
+    // .slice(0, 6) toma solo las primeras 6.
+    return unicas.slice(0, 6);
   } catch (error) {
     console.log("Error con iTunes:", error);
     return [];
