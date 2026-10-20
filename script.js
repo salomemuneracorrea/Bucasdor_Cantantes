@@ -32,7 +32,6 @@ const tarjetaPremios = document.getElementById("tarjeta-premios");
 const tarjetaCanciones = document.getElementById("tarjeta-canciones");
 const tarjetaAlbumes = document.getElementById("tarjeta-albumes");
 const listaSugerencias = document.getElementById("lista-sugerencias");
-const filaRecientes = document.getElementById("recientes");
 
 
 /* -----------------------------------------------------------
@@ -76,15 +75,6 @@ cajaBusqueda.addEventListener("input", function (evento) {
   esperaSugerencias = setTimeout(function () {
     pedirSugerencias(texto);
   }, 400);
-});
-
-/* Botones "Prueba con:" y "Recientes:": al hacer clic, buscan ese nombre.
-   Un solo "escuchador" sirve para todos los botones con la clase "atajo". */
-document.addEventListener("click", function (evento) {
-  if (evento.target.classList.contains("atajo")) {
-    cajaBusqueda.value = evento.target.textContent;
-    buscarCantante(evento.target.textContent);
-  }
 });
 
 
@@ -141,7 +131,7 @@ async function buscarCantante(nombre) {
   } else {
     mensaje.textContent = "";
   }
-  const nombreMostrado = mostrarPerfil(nombre, wikipedia, canciones, datos);
+  mostrarPerfil(nombre, wikipedia, canciones, datos);
   mostrarBiografia(wikipedia, introduccion);
   mostrarDatosPersonales(datos);
   mostrarCarrera(datos, canciones);
@@ -150,9 +140,6 @@ async function buscarCantante(nombre) {
   mostrarAlbumes(albumes);
   ajustarAnchos();
   resultados.hidden = false;
-
-  // Guardamos la búsqueda en "Recientes" con el nombre bien escrito.
-  guardarReciente(nombreMostrado);
 }
 
 
@@ -743,8 +730,7 @@ async function pedirNombres(codigos) {
    =========================================================== */
 
 /* Tarjeta 1: foto grande, nombre, descripción corta, datos clave
-   (género, país, activo desde) y botones de sus redes.
-   Devuelve el nombre que mostró (para guardarlo en "Recientes"). */
+   (género, país, activo desde) y botones de sus redes. */
 function mostrarPerfil(nombreBuscado, wikipedia, canciones, datos) {
   // Nombre: el de Wikipedia, o el de iTunes, o lo que escribió la persona.
   let nombre = nombreBuscado;
@@ -814,8 +800,6 @@ function mostrarPerfil(nombreBuscado, wikipedia, canciones, datos) {
     </div>`;
 
   tarjetaPerfil.innerHTML = html;
-
-  return nombre;
 }
 
 /* Tarjeta 2: biografía (introducción completa de Wikipedia) con enlace al artículo */
@@ -1023,46 +1007,6 @@ function ajustarAnchos() {
   }
 }
 
-/* --- Búsquedas recientes ---
-   Se guardan en el navegador con "localStorage" (una pequeña memoria que
-   no se borra al cerrar la página). Guardamos las últimas 5. */
-const MAXIMO_RECIENTES = 5;
-
-function leerRecientes() {
-  try {
-    return JSON.parse(localStorage.getItem("recientes")) || [];
-  } catch (error) {
-    return []; // si el navegador no deja guardar, seguimos sin recientes
-  }
-}
-
-function guardarReciente(nombre) {
-  // Quitamos el nombre si ya estaba (para ponerlo de primero) y cortamos a 5.
-  let recientes = leerRecientes().filter(function (n) { return sinTildes(n) !== sinTildes(nombre); });
-  recientes.unshift(nombre); // "unshift" agrega al inicio de la lista
-  recientes = recientes.slice(0, MAXIMO_RECIENTES);
-  try {
-    localStorage.setItem("recientes", JSON.stringify(recientes));
-  } catch (error) {
-    // sin memoria del navegador: no pasa nada
-  }
-  mostrarRecientes();
-}
-
-function mostrarRecientes() {
-  const recientes = leerRecientes();
-  if (recientes.length === 0) {
-    filaRecientes.hidden = true;
-    return;
-  }
-  let html = `<span>Recientes:</span>`;
-  for (const nombre of recientes) {
-    html += `<button type="button" class="atajo">${escapar(nombre)}</button>`;
-  }
-  filaRecientes.innerHTML = html;
-  filaRecientes.hidden = false;
-}
-
 /* Por seguridad, convierte símbolos como < y > en texto normal,
    para que lo que llega de internet nunca se ejecute como código. */
 function escapar(texto) {
@@ -1163,9 +1107,6 @@ document.addEventListener("play", function (evento) {
     }
   }
 }, true);
-
-/* Al abrir la página mostramos las búsquedas recientes (si hay). */
-mostrarRecientes();
 
 /* Si la página se abre con un nombre en la dirección (ej: ...?q=Shakira),
    buscamos automáticamente. Así se pueden compartir enlaces de búsqueda. */

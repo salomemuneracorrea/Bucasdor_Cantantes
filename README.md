@@ -15,7 +15,6 @@ Página web para buscar cualquier cantante y ver, en un solo lugar:
 Además:
 
 - **Sugerencias mientras escribes** (nombres de artistas de iTunes); al elegir una, busca de una vez.
-- **Botones de ejemplo** ("Prueba con: Shakira, Karol G…") y tus **últimas 5 búsquedas**, guardadas en el navegador.
 
 Cada sección aparece **solo si hay datos** para ese artista. Se puede buscar con el botón **Buscar** o presionando **Enter**, con o sin tildes y en mayúsculas o minúsculas ("dario gomez" encuentra a "Darío Gómez"). Si una de las fuentes de información falla, la página muestra lo que sí encontró.
 
