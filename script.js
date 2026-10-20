@@ -4,9 +4,10 @@
    ¿Qué hace este archivo?
    1. Espera a que la persona escriba un nombre y presione "Buscar" (o Enter).
    2. Pide información a internet usando 3 "APIs" gratuitas:
-        - Wikipedia: foto, descripción y biografía.
-        - Wikidata:  datos rápidos (país, fecha y lugar de nacimiento).
-        - iTunes:    canciones, portadas, género y vista previa de audio.
+        - Wikipedia: foto, descripción y biografía (introducción completa).
+        - Wikidata:  datos personales, carrera (géneros, instrumentos,
+                     discográficas), premios y redes sociales.
+        - iTunes:    canciones, álbumes, portadas y vista previa de audio.
    3. Muestra todo en la página en forma de tarjetas.
 
    Una API es como un "mesero": le pedimos algo con una dirección (URL)
@@ -26,7 +27,11 @@ const resultados = document.getElementById("resultados");
 const tarjetaPerfil = document.getElementById("tarjeta-perfil");
 const tarjetaBiografia = document.getElementById("tarjeta-biografia");
 const tarjetaDatos = document.getElementById("tarjeta-datos");
+const tarjetaCarrera = document.getElementById("tarjeta-carrera");
+const tarjetaPremios = document.getElementById("tarjeta-premios");
+const tarjetaRedes = document.getElementById("tarjeta-redes");
 const tarjetaCanciones = document.getElementById("tarjeta-canciones");
+const tarjetaAlbumes = document.getElementById("tarjeta-albumes");
 
 
 /* -----------------------------------------------------------
@@ -36,8 +41,11 @@ formulario.addEventListener("submit", function (evento) {
   // Por defecto un formulario recarga la página; esto lo evita.
   evento.preventDefault();
 
-  // .trim() quita los espacios sobrantes al inicio y al final.
-  const nombre = cajaBusqueda.value.trim();
+  // .trim() quita los espacios sobrantes al inicio y al final, y
+  // .replace deja un solo espacio entre palabras ("dario   gomez" -> "dario gomez").
+  // Las tildes y las mayúsculas no importan: al comparar nombres usamos
+  // sinTildes(), así "dario gomez" encuentra a "Darío Gómez".
+  const nombre = cajaBusqueda.value.trim().replace(/\s+/g, " ");
 
   if (nombre !== "") {
     buscarCantante(nombre);
@@ -76,8 +84,15 @@ async function buscarCantante(nombre) {
     return; // "return" termina la función aquí
   }
 
-  // Los datos rápidos necesitan la información de Wikidata que ya trajimos.
-  const datos = await buscarDatosRapidos(wikipedia);
+  // Con lo anterior pedimos, otra vez al mismo tiempo, el resto:
+  //  - los datos de Wikidata (personales, carrera, premios y redes),
+  //  - la introducción completa de Wikipedia (varios párrafos),
+  //  - los álbumes de iTunes.
+  const [datos, introduccion, albumes] = await Promise.all([
+    buscarDatosWikidata(wikipedia),
+    buscarIntroduccion(wikipedia),
+    buscarAlbumes(nombre),
+  ]);
 
   // Ya tenemos todo: quitamos "Buscando..." y dibujamos las tarjetas.
   // Si solo encontramos canciones (iTunes) pero no su artículo en Wikipedia,
@@ -88,9 +103,13 @@ async function buscarCantante(nombre) {
     mensaje.textContent = "";
   }
   mostrarPerfil(nombre, wikipedia, canciones);
-  mostrarBiografia(wikipedia);
-  mostrarDatos(datos, canciones);
+  mostrarBiografia(wikipedia, introduccion);
+  mostrarDatosPersonales(datos);
+  mostrarCarrera(datos, canciones);
+  mostrarPremios(datos);
+  mostrarRedes(datos);
   mostrarCanciones(canciones);
+  mostrarAlbumes(albumes);
   resultados.hidden = false;
 }
 
@@ -272,10 +291,19 @@ async function buscarCanciones(nombre) {
   }
 }
 
-/* --- Wikidata: datos rápidos (país, nacimiento) ---
+/* --- Wikidata: datos personales, carrera, premios y redes ---
    Wikipedia nos da un código como "Q34424" (wikibase_item) que
-   identifica al cantante en Wikidata, una enorme base de datos libre. */
-async function buscarDatosRapidos(wikipedia) {
+   identifica al cantante en Wikidata, una enorme base de datos libre.
+   Cada dato tiene su propio código ("propiedad"):
+     P1477 = nombre real             P569 = fecha de nacimiento
+     P19   = lugar de nacimiento     P570 = fecha de fallecimiento
+     P27   = nacionalidad (puede tener varias)
+     P495  = país de origen (para bandas, que no tienen nacionalidad)
+     P136  = géneros musicales       P1303 = instrumentos
+     P264  = discográficas           P2031 = año en que empezó su carrera
+     P166  = premios recibidos
+     P2003 = Instagram  P2397 = YouTube  P1902 = Spotify               */
+async function buscarDatosWikidata(wikipedia) {
   const datos = {}; // aquí guardaremos lo que encontremos
 
   if (wikipedia === null || !wikipedia.wikibase_item) {
@@ -286,53 +314,261 @@ async function buscarDatosRapidos(wikipedia) {
     // Ya pedimos estos datos al revisar si era músico (en probarArticulo).
     const propiedades = wikipedia.propiedades;
 
-    // En Wikidata cada dato tiene un código:
-    //   P1477 = nombre real        P569 = fecha de nacimiento
-    //   P19   = lugar de nacimiento P27  = país (nacionalidad; puede tener varios)
-    //   P2031 = inicio de su carrera
+    // --- Datos que son texto o fechas (se leen directamente) ---
     const nombreReal = leerValores(propiedades, "P1477")[0];
-    const fecha = leerValores(propiedades, "P569")[0];
-    const lugar = leerValores(propiedades, "P19")[0];
-    // País: para personas es su nacionalidad (P27; Shakira es de Colombia y España).
-    // Las bandas no tienen nacionalidad, sino "país de origen" (P495).
-    let paises = leerValores(propiedades, "P27");
-    if (paises.length === 0) {
-      paises = leerValores(propiedades, "P495");
-    }
-    const inicio = leerValores(propiedades, "P2031")[0];
-
     if (nombreReal) {
-      datos.nombreReal = nombreReal.text;
+      // Un nombre no lleva números. Wikidata a veces trae datos de más
+      // (por ejemplo, un número de teléfono pegado al nombre): los quitamos.
+      const limpio = nombreReal.text.replace(/[0-9]+/g, "").replace(/\s+/g, " ").trim();
+      if (limpio !== "") {
+        datos.nombreReal = limpio;
+      }
     }
-    if (fecha) {
-      // La fecha llega así: "+1977-02-02T00:00:00Z". Tomamos "1977-02-02".
-      datos.nacimiento = formatearFecha(fecha.time.substring(1, 11));
+
+    const nacimiento = leerFecha(leerValores(propiedades, "P569")[0]);
+    const fallecimiento = leerFecha(leerValores(propiedades, "P570")[0]);
+    if (nacimiento) {
+      datos.nacimiento = nacimiento.texto;
+      // Edad: hasta hoy, o hasta la fecha en que falleció.
+      const edad = calcularEdad(nacimiento, fallecimiento);
+      if (edad !== null) {
+        datos.edad = edad;
+      }
     }
+    if (fallecimiento) {
+      datos.fallecimiento = fallecimiento.texto;
+    }
+
+    const inicio = leerValores(propiedades, "P2031")[0];
     if (inicio) {
       // Solo nos interesa el año: "+1990-01-01T..." -> "1990"
       datos.activoDesde = inicio.time.substring(1, 5);
     }
 
-    // El lugar y los países llegan como códigos (ej: "Q2979"); hay que pedir sus nombres.
+    // --- Redes sociales: Wikidata guarda el usuario o el código; armamos el enlace ---
+    datos.redes = [];
+    const instagram = leerValores(propiedades, "P2003")[0];
+    const youtube = leerValores(propiedades, "P2397")[0];
+    const spotify = leerValores(propiedades, "P1902")[0];
+    if (instagram) datos.redes.push({ nombre: "Instagram", icono: "📸", url: "https://www.instagram.com/" + instagram + "/" });
+    if (youtube) datos.redes.push({ nombre: "YouTube", icono: "▶️", url: "https://www.youtube.com/channel/" + youtube });
+    if (spotify) datos.redes.push({ nombre: "Spotify", icono: "🎧", url: "https://open.spotify.com/artist/" + spotify });
+
+    // --- Datos que son OTROS elementos de Wikidata (llegan como códigos Q) ---
+    // Primero juntamos todos los códigos y pedimos sus nombres en español
+    // de una sola vez; después los usamos para cada dato.
+    const lugar = leerValores(propiedades, "P19")[0];
+    let paises = leerValores(propiedades, "P27");
+    datos.etiquetaPais = "🌎 Nacionalidad";
+    if (paises.length === 0) {
+      paises = leerValores(propiedades, "P495"); // bandas: país de origen
+      datos.etiquetaPais = "🌎 País de origen";
+    }
+    const generos = leerValores(propiedades, "P136");
+    const instrumentos = leerValores(propiedades, "P1303");
+    const discograficas = leerValores(propiedades, "P264");
+    const premios = leerPremios(propiedades);
+
     const codigos = [];
-    if (lugar) codigos.push(lugar.id);
-    for (const pais of paises) {
-      codigos.push(pais.id);
+    for (const valor of [lugar].concat(paises, generos, instrumentos, discograficas)) {
+      if (valor && valor.id) codigos.push(valor.id);
+    }
+    for (const premio of premios) {
+      codigos.push(premio.id);
     }
     const nombres = await pedirNombres(codigos);
+
+    // Convierte una lista de valores en una lista de nombres, sin vacíos ni repetidos.
+    const aNombres = function (valores) {
+      const lista = [];
+      for (const valor of valores) {
+        const texto = nombres[valor.id];
+        if (texto && !lista.includes(texto)) {
+          lista.push(texto);
+        }
+      }
+      return lista;
+    };
 
     if (lugar) {
       datos.lugar = nombres[lugar.id];
     }
-    if (paises.length > 0) {
-      // Unimos los nombres con coma: "Colombia, España"
-      datos.pais = paises.map(function (pais) { return nombres[pais.id]; }).join(", ");
-    }
+    datos.paises = aNombres(paises);
+    datos.generos = aNombres(generos).map(primeraMayuscula);
+    datos.instrumentos = aNombres(instrumentos).map(primeraMayuscula);
+    datos.discograficas = aNombres(discograficas);
+    datos.premios = elegirPremios(premios, nombres);
   } catch (error) {
     console.log("Error con Wikidata:", error);
   }
 
   return datos;
+}
+
+/* Lee los premios (P166) con el año en que los recibió, si Wikidata lo tiene
+   (dato extra "P585 = fecha" dentro de cada premio). */
+function leerPremios(propiedades) {
+  const premios = [];
+  for (const dato of propiedades.P166 || []) {
+    if (!dato.mainsnak.datavalue) continue;
+    const premio = { id: dato.mainsnak.datavalue.value.id, anio: null };
+    const fechas = (dato.qualifiers && dato.qualifiers.P585) || [];
+    if (fechas[0] && fechas[0].datavalue) {
+      premio.anio = fechas[0].datavalue.value.time.substring(1, 5);
+    }
+    premios.push(premio);
+  }
+  return premios;
+}
+
+/* Palabras de los premios más conocidos: estos se muestran primero. */
+const PREMIOS_IMPORTANTES = ["grammy", "billboard", "mtv", "lo nuestro", "american music", "globo de oro", "oscar", "salon de la fama"];
+
+/* Escoge hasta 5 premios: primero los más conocidos (Grammy, Billboard...),
+   luego el resto. Si un premio se repite en varios años, sale una sola vez
+   con sus años juntos: "Premio Grammy (2001, 2006)". */
+function elegirPremios(premios, nombres) {
+  const porNombre = {}; // ej: { "Premio Grammy": ["2001", "2006"] }
+  const orden = [];
+  for (const premio of premios) {
+    // Algunos nombres vienen de páginas de listas ("Anexo:Premio Grammy...")
+    // o en minúscula ("premio Grammy..."): los dejamos limpios.
+    let nombre = nombres[premio.id];
+    if (!nombre) continue;
+    nombre = primeraMayuscula(nombre.replace(/^(Anexo|Annex):/, "").trim());
+    if (!porNombre[nombre]) {
+      porNombre[nombre] = [];
+      orden.push(nombre);
+    }
+    if (premio.anio && !porNombre[nombre].includes(premio.anio)) {
+      porNombre[nombre].push(premio.anio);
+    }
+  }
+
+  const esImportante = function (nombre) {
+    return PREMIOS_IMPORTANTES.some(function (palabra) { return sinTildes(nombre).includes(palabra); });
+  };
+  const ordenados = orden.filter(esImportante).concat(orden.filter(function (n) { return !esImportante(n); }));
+
+  return ordenados.slice(0, 5).map(function (nombre) {
+    const anios = porNombre[nombre].sort();
+    return anios.length > 0 ? nombre + " (" + anios.join(", ") + ")" : nombre;
+  });
+}
+
+/* Convierte una fecha de Wikidata en texto. Llega así:
+   { time: "+1977-02-02T00:00:00Z", precision: 11 }
+   "precision" dice qué tan exacta es: 11 = día, 10 = mes, 9 = solo el año. */
+function leerFecha(valor) {
+  if (!valor || !valor.time) {
+    return null;
+  }
+  const anio = Number(valor.time.substring(1, 5));
+  const mes = Number(valor.time.substring(6, 8));
+  const dia = Number(valor.time.substring(9, 11));
+
+  if (valor.precision >= 11) {
+    return { anio: anio, mes: mes, dia: dia, texto: formatearFecha(valor.time.substring(1, 11)) };
+  }
+  // Si solo se sabe el año, mostramos solo el año.
+  return { anio: anio, mes: null, dia: null, texto: String(anio) };
+}
+
+/* Edad en años: hasta hoy, o hasta la fecha de fallecimiento.
+   Solo la calculamos si sabemos el día exacto de nacimiento. */
+function calcularEdad(nacimiento, fallecimiento) {
+  if (nacimiento.dia === null) {
+    return null;
+  }
+  let hasta;
+  if (fallecimiento) {
+    if (fallecimiento.dia === null) return null;
+    hasta = fallecimiento;
+  } else {
+    const hoy = new Date();
+    hasta = { anio: hoy.getFullYear(), mes: hoy.getMonth() + 1, dia: hoy.getDate() };
+  }
+  let edad = hasta.anio - nacimiento.anio;
+  // Si este año todavía no ha llegado su cumpleaños, restamos uno.
+  if (hasta.mes < nacimiento.mes || (hasta.mes === nacimiento.mes && hasta.dia < nacimiento.dia)) {
+    edad = edad - 1;
+  }
+  return edad;
+}
+
+/* --- Wikipedia: introducción completa (varios párrafos) ---
+   El resumen corto solo trae un párrafo. Con "prop=extracts&exintro"
+   Wikipedia devuelve TODA la introducción del artículo, y con
+   "explaintext" la devuelve como texto normal (sin código HTML).
+   Devuelve una lista de párrafos, o una lista vacía si falla. */
+async function buscarIntroduccion(wikipedia) {
+  if (wikipedia === null) {
+    return [];
+  }
+  try {
+    const titulo = wikipedia.titles ? wikipedia.titles.canonical : wikipedia.title;
+    const url = "https://" + wikipedia.idioma + ".wikipedia.org/w/api.php" +
+      "?action=query&prop=extracts&exintro&explaintext&redirects=1&format=json&origin=*" +
+      "&titles=" + encodeURIComponent(titulo.replaceAll("_", " "));
+    const respuesta = await fetch(url);
+    const datos = await respuesta.json();
+
+    // La respuesta trae las páginas con su número como clave: { "4715": { extract: "..." } }
+    const paginas = Object.values(datos.query.pages);
+    const texto = paginas[0].extract || "";
+
+    // Cada salto de línea separa un párrafo. Quitamos los vacíos y los
+    // caracteres invisibles que a veces deja Wikipedia ("​").
+    return texto.split("\n")
+      .map(function (parrafo) { return parrafo.replace(/​/g, "").trim(); })
+      .filter(function (parrafo) { return parrafo !== ""; });
+  } catch (error) {
+    console.log("Error con la introducción de Wikipedia:", error);
+    return [];
+  }
+}
+
+/* --- iTunes: álbumes del artista ---
+   1. Buscamos al artista en iTunes y nos quedamos con el que se llama
+      EXACTAMENTE igual (sin importar tildes ni mayúsculas).
+   2. Con su número de artista (artistId) pedimos sus álbumes.
+   Así no salen álbumes de otro artista con un nombre parecido. */
+async function buscarAlbumes(nombre) {
+  try {
+    const urlArtista = "https://itunes.apple.com/search?entity=musicArtist&limit=10" +
+      "&term=" + encodeURIComponent(nombre);
+    const artistas = (await (await fetch(urlArtista)).json()).results;
+    const artista = artistas.find(function (a) { return sinTildes(a.artistName) === sinTildes(nombre); });
+    if (!artista) {
+      return [];
+    }
+
+    const urlAlbumes = "https://itunes.apple.com/lookup?entity=album&limit=60&id=" + artista.artistId;
+    const resultados = (await (await fetch(urlAlbumes)).json()).results;
+
+    // El primer resultado es el artista; los demás, sus álbumes.
+    // Quitamos los sencillos (" - Single") y los álbumes repetidos
+    // (ej: "Fijación Oral, Vol. 1" y "Fijación Oral, Vol. 1 (Deluxe)").
+    const vistos = [];
+    const albumes = [];
+    for (const album of resultados) {
+      if (album.wrapperType !== "collection" || / - Single$/.test(album.collectionName)) {
+        continue;
+      }
+      const clave = sinTildes(album.collectionName.replace(/\(.*?\)|\[.*?\]| - EP$/g, "")).trim();
+      if (!vistos.includes(clave)) {
+        vistos.push(clave);
+        albumes.push(album);
+      }
+    }
+
+    // Del más nuevo al más antiguo, y solo 6.
+    albumes.sort(function (a, b) { return (b.releaseDate || "").localeCompare(a.releaseDate || ""); });
+    return albumes.slice(0, 6);
+  } catch (error) {
+    console.log("Error con los álbumes de iTunes:", error);
+    return [];
+  }
 }
 
 /* Pide a Wikidata todos los datos ("propiedades") de un artista o banda.
@@ -413,16 +649,22 @@ async function pedirNombres(codigos) {
     return nombres;
   }
 
-  const url = "https://www.wikidata.org/w/api.php?action=wbgetentities&props=labels&languages=es|en&format=json&origin=*" +
-    "&ids=" + codigos.join("|");
-  const respuesta = await fetch(url);
-  const json = await respuesta.json();
+  // Quitamos códigos repetidos. Wikidata acepta máximo 50 por consulta,
+  // así que si hay más (ej: muchos premios) los pedimos por grupos.
+  const unicos = [...new Set(codigos)];
+  for (let i = 0; i < unicos.length; i += 50) {
+    const grupo = unicos.slice(i, i + 50);
+    const url = "https://www.wikidata.org/w/api.php?action=wbgetentities&props=labels&languages=es|en&format=json&origin=*" +
+      "&ids=" + grupo.join("|");
+    const respuesta = await fetch(url);
+    const json = await respuesta.json();
 
-  for (const codigo of codigos) {
-    const etiquetas = json.entities[codigo].labels;
-    // Preferimos el nombre en español; si no hay, en inglés.
-    const etiqueta = etiquetas.es || etiquetas.en;
-    nombres[codigo] = etiqueta ? etiqueta.value : null;
+    for (const codigo of grupo) {
+      const etiquetas = (json.entities[codigo] && json.entities[codigo].labels) || {};
+      // Preferimos el nombre en español; si no hay, en inglés.
+      const etiqueta = etiquetas.es || etiquetas.en;
+      nombres[codigo] = etiqueta ? etiqueta.value : null;
+    }
   }
   return nombres;
 }
@@ -478,51 +720,118 @@ function mostrarPerfil(nombreBuscado, wikipedia, canciones) {
   tarjetaPerfil.innerHTML = html;
 }
 
-/* Tarjeta 2: biografía de Wikipedia con enlace al artículo completo */
-function mostrarBiografia(wikipedia) {
+/* Tarjeta 2: biografía (introducción completa de Wikipedia) con enlace al artículo */
+function mostrarBiografia(wikipedia, introduccion) {
   if (wikipedia === null) {
     return; // sin Wikipedia no hay biografía (la tarjeta queda oculta)
   }
 
+  // Si no llegó la introducción completa, usamos el resumen corto.
+  const parrafos = introduccion.length > 0 ? introduccion : [wikipedia.extract];
+
   const enlace = wikipedia.content_urls.desktop.page;
   const aviso = wikipedia.idioma === "en"
-    ? `<p class="sin-vista-previa">No encontramos el artículo en español; este resumen está en inglés.</p>`
+    ? `<p class="sin-vista-previa">No encontramos el artículo en español; esta biografía está en inglés.</p>`
     : "";
 
-  tarjetaBiografia.innerHTML = `
-    <h2>📖 Biografía</h2>
-    <p>${escapar(wikipedia.extract)}</p>
-    ${aviso}
+  let html = `<h2>📖 Biografía</h2>`;
+  for (const parrafo of parrafos) {
+    html += `<p>${escapar(parrafo)}</p>`;
+  }
+  html += `${aviso}
     <a class="enlace-boton" href="${enlace}" target="_blank" rel="noopener">Ver más en Wikipedia</a>`;
+
+  tarjetaBiografia.innerHTML = html;
 }
 
-/* Tarjeta 3: datos rápidos (solo los que existan) */
-function mostrarDatos(datos, canciones) {
+/* Tarjeta 3: datos personales (solo los que existan) */
+function mostrarDatosPersonales(datos) {
   // Armamos una lista de [nombre del dato, valor].
   const filas = [];
 
-  const genero = generoPrincipal(canciones);
   if (datos.nombreReal) filas.push(["🪪 Nombre real", datos.nombreReal]);
-  if (genero) filas.push(["🎵 Género musical", genero]);
-  if (datos.pais) filas.push(["🌎 País", datos.pais]);
+  if (datos.nacimiento) {
+    // Si sigue vivo, mostramos su edad junto a la fecha.
+    const edad = datos.edad !== undefined && !datos.fallecimiento ? " (" + datos.edad + " años)" : "";
+    filas.push(["🎂 Fecha de nacimiento", datos.nacimiento + edad]);
+  }
   if (datos.lugar) filas.push(["📍 Lugar de nacimiento", datos.lugar]);
-  if (datos.nacimiento) filas.push(["🎂 Fecha de nacimiento", datos.nacimiento]);
+  if (datos.fallecimiento) {
+    const edad = datos.edad !== undefined ? " (a los " + datos.edad + " años)" : "";
+    filas.push(["🕊️ Fecha de fallecimiento", datos.fallecimiento + edad]);
+  }
+  if (datos.paises && datos.paises.length > 0) filas.push([datos.etiquetaPais, datos.paises.join(", ")]);
+
+  dibujarLista(tarjetaDatos, "👤 Datos personales", filas);
+}
+
+/* Tarjeta 4: carrera musical.
+   El género sale de Wikidata (P136), que es más preciso: por ejemplo,
+   iTunes pone a Darío Gómez en "Música Mexicana", pero Wikidata dice
+   "música popular colombiana". Solo si Wikidata no tiene ningún género
+   usamos el de iTunes (el que más se repite entre sus canciones). */
+function mostrarCarrera(datos, canciones) {
+  const filas = [];
+
+  let generos = datos.generos || [];
+  let fuenteGenero = "";
+  if (generos.length === 0) {
+    const generoITunes = generoPrincipal(canciones);
+    if (generoITunes) {
+      generos = [generoITunes];
+      fuenteGenero = " (según iTunes)";
+    }
+  }
+
+  if (generos.length > 0) filas.push(["🎵 Géneros" + fuenteGenero, generos.join(", ")]);
+  if (datos.instrumentos && datos.instrumentos.length > 0) filas.push(["🎸 Instrumentos", datos.instrumentos.join(", ")]);
+  if (datos.discograficas && datos.discograficas.length > 0) filas.push(["💿 Discográficas", datos.discograficas.join(", ")]);
   if (datos.activoDesde) filas.push(["🎤 Activo desde", datos.activoDesde]);
 
+  dibujarLista(tarjetaCarrera, "🎼 Carrera", filas);
+}
+
+/* Tarjeta 5: hasta 5 premios */
+function mostrarPremios(datos) {
+  if (!datos.premios || datos.premios.length === 0) {
+    return;
+  }
+  let html = `<h2>🏆 Premios</h2><ul class="lista-premios">`;
+  for (const premio of datos.premios) {
+    html += `<li>🏅 ${escapar(premio)}</li>`;
+  }
+  html += `</ul>`;
+  tarjetaPremios.innerHTML = html;
+}
+
+/* Tarjeta 6: botones a sus redes (se abren en otra pestaña) */
+function mostrarRedes(datos) {
+  if (!datos.redes || datos.redes.length === 0) {
+    return;
+  }
+  let html = `<h2>🔗 Redes</h2><div class="lista-redes">`;
+  for (const red of datos.redes) {
+    html += `<a class="boton-red" href="${escapar(red.url)}" target="_blank" rel="noopener">${red.icono} ${red.nombre}</a>`;
+  }
+  html += `</div>`;
+  tarjetaRedes.innerHTML = html;
+}
+
+/* Dibuja una tarjeta con una lista de "dato: valor".
+   Si no hay ninguna fila, la tarjeta queda vacía (y oculta). */
+function dibujarLista(tarjeta, titulo, filas) {
   if (filas.length === 0) {
     return; // nada que mostrar
   }
-
-  let html = `<h2>⚡ Datos rápidos</h2><ul class="lista-datos">`;
+  let html = `<h2>${titulo}</h2><ul class="lista-datos">`;
   for (const fila of filas) {
     html += `<li><strong>${fila[0]}</strong><span>${escapar(String(fila[1]))}</span></li>`;
   }
   html += `</ul>`;
-
-  tarjetaDatos.innerHTML = html;
+  tarjeta.innerHTML = html;
 }
 
-/* Tarjeta 4: canciones populares con portada y vista previa */
+/* Tarjeta 7: canciones populares con portada y vista previa */
 function mostrarCanciones(canciones) {
   if (canciones.length === 0) {
     tarjetaCanciones.innerHTML = `
@@ -558,17 +867,38 @@ function mostrarCanciones(canciones) {
   tarjetaCanciones.innerHTML = html;
 }
 
+/* Tarjeta 8: álbumes (portada, nombre y año) en cuadrícula */
+function mostrarAlbumes(albumes) {
+  if (albumes.length === 0) {
+    return;
+  }
+  let html = `<h2>💿 Álbumes <small>(según iTunes)</small></h2><div class="lista-albumes">`;
+  for (const album of albumes) {
+    const anio = album.releaseDate ? album.releaseDate.substring(0, 4) : "";
+    html += `
+      <div class="album">
+        <img class="portada-album" src="${portadaGrande(album.artworkUrl100, 300)}"
+             alt="Portada de ${escapar(album.collectionName)}" loading="lazy">
+        <p class="nombre-album">${escapar(album.collectionName)}</p>
+        <p class="detalle-cancion">${anio}</p>
+      </div>`;
+  }
+  html += `</div>`;
+  tarjetaAlbumes.innerHTML = html;
+}
+
 
 /* ===========================================================
    6. FUNCIONES DE AYUDA (pequeñas tareas que se repiten)
    =========================================================== */
 
-/* Vacía las 4 tarjetas antes de una nueva búsqueda. */
+/* Vacía todas las tarjetas antes de una nueva búsqueda. */
 function limpiarTarjetas() {
-  tarjetaPerfil.innerHTML = "";
-  tarjetaBiografia.innerHTML = "";
-  tarjetaDatos.innerHTML = "";
-  tarjetaCanciones.innerHTML = "";
+  const tarjetas = [tarjetaPerfil, tarjetaBiografia, tarjetaDatos, tarjetaCarrera,
+    tarjetaPremios, tarjetaRedes, tarjetaCanciones, tarjetaAlbumes];
+  for (const tarjeta of tarjetas) {
+    tarjeta.innerHTML = "";
+  }
 }
 
 /* Por seguridad, convierte símbolos como < y > en texto normal,
