@@ -2,14 +2,20 @@
 
 Página web para buscar cualquier cantante y ver, en un solo lugar:
 
-- **Foto, nombre y descripción corta.**
+- **Foto, nombre y descripción corta**, con etiquetas de género, país y año de inicio, y botones a sus redes (Instagram, YouTube y Spotify).
 - **Biografía:** la introducción completa del artículo de Wikipedia (varios párrafos), con enlace para leer el artículo completo.
 - **Datos personales:** nombre real, fecha de nacimiento con su edad, lugar de nacimiento, fecha de fallecimiento (si aplica) y nacionalidad.
 - **Carrera:** géneros musicales, instrumentos, discográficas y desde qué año está activo.
 - **Premios:** hasta 5, primero los más conocidos (Grammy, Billboard, MTV…), con el año.
-- **Redes:** botones a Instagram, YouTube y Spotify.
 - **Canciones populares:** 5 canciones con la portada del álbum, el nombre del álbum, el año y una vista previa de audio de 30 segundos.
 - **Álbumes:** unos 6 álbumes con portada, nombre y año.
+
+Además:
+
+- **Sugerencias mientras escribes** (nombres de artistas de iTunes); al elegir una, busca de una vez.
+- **Botones de ejemplo** ("Prueba con: Shakira, Karol G…") y tus **últimas 5 búsquedas**, guardadas en el navegador.
+- **Botón "Copiar enlace"** para compartir la búsqueda.
+- **Modo oscuro** automático si el celular o el computador lo tiene activado.
 
 Cada sección aparece **solo si hay datos** para ese artista. Se puede buscar con el botón **Buscar** o presionando **Enter**, con o sin tildes y en mayúsculas o minúsculas ("dario gomez" encuentra a "Darío Gómez"). Si una de las fuentes de información falla, la página muestra lo que sí encontró.
 

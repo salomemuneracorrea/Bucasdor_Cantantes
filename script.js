@@ -29,9 +29,10 @@ const tarjetaBiografia = document.getElementById("tarjeta-biografia");
 const tarjetaDatos = document.getElementById("tarjeta-datos");
 const tarjetaCarrera = document.getElementById("tarjeta-carrera");
 const tarjetaPremios = document.getElementById("tarjeta-premios");
-const tarjetaRedes = document.getElementById("tarjeta-redes");
 const tarjetaCanciones = document.getElementById("tarjeta-canciones");
 const tarjetaAlbumes = document.getElementById("tarjeta-albumes");
+const listaSugerencias = document.getElementById("lista-sugerencias");
+const filaRecientes = document.getElementById("recientes");
 
 
 /* -----------------------------------------------------------
@@ -53,14 +54,50 @@ formulario.addEventListener("submit", function (evento) {
 });
 
 
+/* Mientras se escribe, mostramos sugerencias de artistas (de iTunes).
+   Esperamos a que la persona deje de escribir un momento (400 ms) para
+   no hacer una consulta por cada letra. */
+let esperaSugerencias = null;
+cajaBusqueda.addEventListener("input", function (evento) {
+  // Si eligió una sugerencia de la lista, buscamos de una vez.
+  if (evento.inputType === "insertReplacementText" || evento.inputType === undefined) {
+    const nombre = cajaBusqueda.value.trim();
+    if (nombre !== "") {
+      buscarCantante(nombre);
+      return;
+    }
+  }
+
+  clearTimeout(esperaSugerencias);
+  const texto = cajaBusqueda.value.trim();
+  if (texto.length < 3) {
+    return; // con menos de 3 letras hay demasiados resultados
+  }
+  esperaSugerencias = setTimeout(function () {
+    pedirSugerencias(texto);
+  }, 400);
+});
+
+/* Botones "Prueba con:" y "Recientes:": al hacer clic, buscan ese nombre.
+   Un solo "escuchador" sirve para todos los botones con la clase "atajo". */
+document.addEventListener("click", function (evento) {
+  if (evento.target.classList.contains("atajo")) {
+    cajaBusqueda.value = evento.target.textContent;
+    buscarCantante(evento.target.textContent);
+  }
+});
+
+
 /* -----------------------------------------------------------
    3. FUNCIÓN PRINCIPAL: buscar un cantante
    "async" significa que la función espera respuestas de internet
    usando "await" sin congelar la página.
    ----------------------------------------------------------- */
 async function buscarCantante(nombre) {
-  // Mostramos "Buscando..." y escondemos los resultados anteriores.
+  // Mostramos "Buscando..." (con un círculo que gira, ver style.css)
+  // y escondemos los resultados anteriores.
   mensaje.textContent = "Buscando...";
+  mensaje.classList.add("cargando");
   resultados.hidden = true;
   limpiarTarjetas();
 
@@ -80,6 +117,7 @@ async function buscarCantante(nombre) {
 
   // Si ninguna de las dos encontró algo, mostramos un mensaje amable.
   if (wikipedia === null && canciones.length === 0) {
+    mensaje.classList.remove("cargando");
     mensaje.textContent = "No encontramos a ese cantante, revisa cómo lo escribiste 🙂";
     return; // "return" termina la función aquí
   }
@@ -95,6 +133,7 @@ async function buscarCantante(nombre) {
   ]);
 
   // Ya tenemos todo: quitamos "Buscando..." y dibujamos las tarjetas.
+  mensaje.classList.remove("cargando");
   // Si solo encontramos canciones (iTunes) pero no su artículo en Wikipedia,
   // dejamos un aviso corto en lugar de mostrar información equivocada.
   if (wikipedia === null) {
@@ -102,15 +141,18 @@ async function buscarCantante(nombre) {
   } else {
     mensaje.textContent = "";
   }
-  mostrarPerfil(nombre, wikipedia, canciones);
+  const nombreMostrado = mostrarPerfil(nombre, wikipedia, canciones, datos);
   mostrarBiografia(wikipedia, introduccion);
   mostrarDatosPersonales(datos);
   mostrarCarrera(datos, canciones);
   mostrarPremios(datos);
-  mostrarRedes(datos);
   mostrarCanciones(canciones);
   mostrarAlbumes(albumes);
+  ajustarAnchos();
   resultados.hidden = false;
+
+  // Guardamos la búsqueda en "Recientes" con el nombre bien escrito.
+  guardarReciente(nombreMostrado);
 }
 
 
@@ -251,6 +293,29 @@ async function pedirResumen(titulo, idioma) {
     return null;
   }
   return await respuesta.json();
+}
+
+/* --- iTunes: sugerencias mientras se escribe ---
+   Llena la lista <datalist> con hasta 6 nombres de artistas.
+   Si falla, simplemente no se muestran sugerencias. */
+async function pedirSugerencias(texto) {
+  try {
+    const url = "https://itunes.apple.com/search?entity=musicArtist&limit=6" +
+      "&term=" + encodeURIComponent(texto);
+    const datos = await (await fetch(url)).json();
+
+    let html = "";
+    const vistos = []; // a veces iTunes repite el mismo nombre
+    for (const artista of datos.results) {
+      if (!vistos.includes(sinTildes(artista.artistName))) {
+        vistos.push(sinTildes(artista.artistName));
+        html += `<option value="${escapar(artista.artistName)}"></option>`;
+      }
+    }
+    listaSugerencias.innerHTML = html;
+  } catch (error) {
+    console.log("Error con las sugerencias:", error);
+  }
 }
 
 /* --- iTunes: canciones populares ---
@@ -676,8 +741,10 @@ async function pedirNombres(codigos) {
    donde ${variable} se reemplaza por su valor.
    =========================================================== */
 
-/* Tarjeta 1: foto grande, nombre y descripción corta */
-function mostrarPerfil(nombreBuscado, wikipedia, canciones) {
+/* Tarjeta 1: foto grande, nombre, descripción corta, datos clave
+   (género, país, activo desde), botones de redes y "Copiar enlace".
+   Devuelve el nombre que mostró (para guardarlo en "Recientes"). */
+function mostrarPerfil(nombreBuscado, wikipedia, canciones, datos) {
   // Nombre: el de Wikipedia, o el de iTunes, o lo que escribió la persona.
   let nombre = nombreBuscado;
   if (wikipedia !== null) {
@@ -711,13 +778,54 @@ function mostrarPerfil(nombreBuscado, wikipedia, canciones) {
   if (foto !== "") {
     html += `<img class="foto-cantante" src="${foto}" alt="Foto de ${escapar(nombre)}">`;
   }
+  // Datos clave en forma de etiquetas (solo los que existan).
+  const etiquetas = [];
+  const genero = (datos.generos && datos.generos[0]) || generoPrincipal(canciones);
+  if (genero) etiquetas.push("🎵 " + genero);
+  if (datos.paises && datos.paises.length > 0) etiquetas.push("🌎 " + datos.paises.join(", "));
+  if (datos.activoDesde) etiquetas.push("🎤 Desde " + datos.activoDesde);
+
+  let htmlEtiquetas = "";
+  if (etiquetas.length > 0) {
+    htmlEtiquetas = `<ul class="etiquetas">`;
+    for (const etiqueta of etiquetas) {
+      htmlEtiquetas += `<li>${escapar(etiqueta)}</li>`;
+    }
+    htmlEtiquetas += `</ul>`;
+  }
+
+  // Botones de sus redes (se abren en otra pestaña) y el de compartir.
+  let htmlBotones = `<div class="botones-perfil">`;
+  for (const red of datos.redes || []) {
+    htmlBotones += `<a class="boton-red" href="${escapar(red.url)}" target="_blank" rel="noopener">${red.icono} ${red.nombre}</a>`;
+  }
+  htmlBotones += `<button type="button" id="boton-compartir" class="boton-compartir">🔗 Copiar enlace</button></div>`;
+
   html += `
     <div>
       <h2 class="nombre-cantante">${escapar(nombre)}</h2>
       <p class="descripcion-cantante">${escapar(primeraMayuscula(descripcion))}</p>
+      ${htmlEtiquetas}
+      ${htmlBotones}
     </div>`;
 
   tarjetaPerfil.innerHTML = html;
+
+  // "Copiar enlace": copia la dirección de la página (que ya tiene ?q=NOMBRE)
+  // para pegarla en WhatsApp, por ejemplo.
+  const botonCompartir = document.getElementById("boton-compartir");
+  // Si el navegador no deja copiar, mostramos el enlace en una ventanita
+  // para que la persona lo copie a mano.
+  botonCompartir.addEventListener("click", function () {
+    const enlace = window.location.href;
+    navigator.clipboard.writeText(enlace).then(function () {
+      botonCompartir.textContent = "✅ ¡Enlace copiado!";
+    }).catch(function () {
+      window.prompt("Copia este enlace:", enlace);
+    });
+  });
+
+  return nombre;
 }
 
 /* Tarjeta 2: biografía (introducción completa de Wikipedia) con enlace al artículo */
@@ -828,19 +936,6 @@ function mostrarPremios(datos) {
   tarjetaPremios.innerHTML = html;
 }
 
-/* Tarjeta 6: botones a sus redes (se abren en otra pestaña) */
-function mostrarRedes(datos) {
-  if (!datos.redes || datos.redes.length === 0) {
-    return;
-  }
-  let html = `<h2>🔗 Redes</h2><div class="lista-redes">`;
-  for (const red of datos.redes) {
-    html += `<a class="boton-red" href="${escapar(red.url)}" target="_blank" rel="noopener">${red.icono} ${red.nombre}</a>`;
-  }
-  html += `</div>`;
-  tarjetaRedes.innerHTML = html;
-}
-
 /* Dibuja una tarjeta con una lista de "dato: valor".
    Si no hay ninguna fila, la tarjeta queda vacía (y oculta). */
 function dibujarLista(tarjeta, titulo, filas) {
@@ -855,7 +950,7 @@ function dibujarLista(tarjeta, titulo, filas) {
   tarjeta.innerHTML = html;
 }
 
-/* Tarjeta 7: canciones populares con portada y vista previa */
+/* Tarjeta 6: canciones populares con portada y vista previa */
 function mostrarCanciones(canciones) {
   if (canciones.length === 0) {
     tarjetaCanciones.innerHTML = `
@@ -891,7 +986,7 @@ function mostrarCanciones(canciones) {
   tarjetaCanciones.innerHTML = html;
 }
 
-/* Tarjeta 8: álbumes (portada, nombre y año) en cuadrícula */
+/* Tarjeta 7: álbumes (portada, nombre y año) en cuadrícula */
 function mostrarAlbumes(albumes) {
   if (albumes.length === 0) {
     return;
@@ -919,10 +1014,63 @@ function mostrarAlbumes(albumes) {
 /* Vacía todas las tarjetas antes de una nueva búsqueda. */
 function limpiarTarjetas() {
   const tarjetas = [tarjetaPerfil, tarjetaBiografia, tarjetaDatos, tarjetaCarrera,
-    tarjetaPremios, tarjetaRedes, tarjetaCanciones, tarjetaAlbumes];
+    tarjetaPremios, tarjetaCanciones, tarjetaAlbumes];
   for (const tarjeta of tarjetas) {
     tarjeta.innerHTML = "";
   }
+}
+
+/* En computador las tarjetas van de a dos: biografía | datos personales
+   y carrera | premios. Si una de la pareja quedó vacía, la otra ocupa
+   todo el ancho para que no quede un hueco al lado. */
+function ajustarAnchos() {
+  const parejas = [[tarjetaBiografia, tarjetaDatos], [tarjetaCarrera, tarjetaPremios]];
+  for (const pareja of parejas) {
+    const primera = pareja[0];
+    const segunda = pareja[1];
+    primera.classList.toggle("tarjeta-ancha", segunda.innerHTML === "");
+    segunda.classList.toggle("tarjeta-ancha", primera.innerHTML === "");
+  }
+}
+
+/* --- Búsquedas recientes ---
+   Se guardan en el navegador con "localStorage" (una pequeña memoria que
+   no se borra al cerrar la página). Guardamos las últimas 5. */
+const MAXIMO_RECIENTES = 5;
+
+function leerRecientes() {
+  try {
+    return JSON.parse(localStorage.getItem("recientes")) || [];
+  } catch (error) {
+    return []; // si el navegador no deja guardar, seguimos sin recientes
+  }
+}
+
+function guardarReciente(nombre) {
+  // Quitamos el nombre si ya estaba (para ponerlo de primero) y cortamos a 5.
+  let recientes = leerRecientes().filter(function (n) { return sinTildes(n) !== sinTildes(nombre); });
+  recientes.unshift(nombre); // "unshift" agrega al inicio de la lista
+  recientes = recientes.slice(0, MAXIMO_RECIENTES);
+  try {
+    localStorage.setItem("recientes", JSON.stringify(recientes));
+  } catch (error) {
+    // sin memoria del navegador: no pasa nada
+  }
+  mostrarRecientes();
+}
+
+function mostrarRecientes() {
+  const recientes = leerRecientes();
+  if (recientes.length === 0) {
+    filaRecientes.hidden = true;
+    return;
+  }
+  let html = `<span>Recientes:</span>`;
+  for (const nombre of recientes) {
+    html += `<button type="button" class="atajo">${escapar(nombre)}</button>`;
+  }
+  filaRecientes.innerHTML = html;
+  filaRecientes.hidden = false;
 }
 
 /* Por seguridad, convierte símbolos como < y > en texto normal,
@@ -1025,6 +1173,9 @@ document.addEventListener("play", function (evento) {
     }
   }
 }, true);
+
+/* Al abrir la página mostramos las búsquedas recientes (si hay). */
+mostrarRecientes();
 
 /* Si la página se abre con un nombre en la dirección (ej: ...?q=Shakira),
    buscamos automáticamente. Así se pueden compartir enlaces de búsqueda. */

@@ -20,6 +20,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 
+  <!-- Ícono de la pestaña del navegador: el emoji 🎤 dibujado como imagen SVG -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+
   <!-- Conectamos la hoja de estilos (el diseño de la página) -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -40,10 +43,27 @@
         class="caja-busqueda"
         placeholder="Ej: Shakira, Karol G, Juanes..."
         autocomplete="off"
+        list="lista-sugerencias"
         required
       >
+      <!-- "datalist" es la lista de sugerencias que aparece mientras se escribe.
+           JavaScript la llena con nombres de artistas de iTunes. -->
+      <datalist id="lista-sugerencias"></datalist>
       <button type="submit" class="boton-buscar">Buscar</button>
     </form>
+
+    <!-- Botones de ejemplo y búsquedas recientes (se buscan con un clic) -->
+    <div class="atajos">
+      <p class="fila-atajos">
+        <span>Prueba con:</span>
+        <button type="button" class="atajo">Shakira</button>
+        <button type="button" class="atajo">Karol G</button>
+        <button type="button" class="atajo">Queen</button>
+        <button type="button" class="atajo">Diomedes Díaz</button>
+      </p>
+      <!-- JavaScript llena esta fila con las últimas búsquedas -->
+      <p id="recientes" class="fila-atajos" hidden></p>
+    </div>
   </header>
 
   <!-- ===== ZONA PRINCIPAL ===== -->
@@ -56,7 +76,8 @@
          y JavaScript lo muestra cuando hay algo que enseñar. -->
     <section id="resultados" class="resultados" hidden>
 
-      <!-- 1. Tarjeta principal: foto, nombre y descripción corta -->
+      <!-- 1. Tarjeta principal: foto, nombre, descripción, datos clave,
+              redes y botón para compartir -->
       <article id="tarjeta-perfil" class="tarjeta tarjeta-perfil"></article>
 
       <!-- 2. Biografía (introducción completa de Wikipedia) -->
@@ -71,13 +92,10 @@
       <!-- 5. Premios (hasta 5) -->
       <article id="tarjeta-premios" class="tarjeta"></article>
 
-      <!-- 6. Redes (Instagram, YouTube, Spotify) -->
-      <article id="tarjeta-redes" class="tarjeta tarjeta-ancha"></article>
-
-      <!-- 7. Canciones populares (iTunes) -->
+      <!-- 6. Canciones populares (iTunes) -->
       <article id="tarjeta-canciones" class="tarjeta tarjeta-ancha"></article>
 
-      <!-- 8. Álbumes (iTunes) -->
+      <!-- 7. Álbumes (iTunes) -->
       <article id="tarjeta-albumes" class="tarjeta tarjeta-ancha"></article>
     </section>
   </main>
