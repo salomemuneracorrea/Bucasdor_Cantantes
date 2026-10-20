@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- ===========================================================
-     BUSCADOR DE CANTANTES - Página principal (index.html)
+     MELODEX - Buscador de cantantes - Página principal (index.html)
      Aquí está la ESTRUCTURA de la página: el título, la caja de
      búsqueda y los espacios vacíos donde JavaScript (script.js)
      va a poner los resultados. Los colores y el diseño están en
@@ -12,7 +12,7 @@
   <meta charset="UTF-8">
   <!-- Esta línea hace que la página se adapte al tamaño del celular -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Buscador de Cantantes</title>
+  <title>Melodex · Buscador de cantantes</title>
   <meta name="description" content="Busca cualquier cantante y conoce su foto, biografía, datos, carrera, premios, redes, canciones y álbumes.">
 
   <!-- Tipografía "Poppins" de Google Fonts (solo cambia cómo se ven las letras) -->
@@ -20,8 +20,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <!-- Ícono de la pestaña del navegador: el emoji 🎤 dibujado como imagen SVG -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+  <!-- Ícono de la pestaña del navegador: nuestro logo (logo.svg) -->
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
 
   <!-- Conectamos la hoja de estilos (el diseño de la página) -->
   <link rel="stylesheet" href="style.css">
@@ -30,8 +30,12 @@
 
   <!-- ===== ENCABEZADO: título y buscador ===== -->
   <header class="encabezado">
-    <h1 class="titulo">🎤 Buscador de Cantantes</h1>
-    <p class="subtitulo">Escribe el nombre de un cantante y descubre su historia y sus canciones</p>
+    <!-- Logo y nombre de la página -->
+    <div class="marca">
+      <img class="logo" src="logo.svg" alt="" width="64" height="64">
+      <h1 class="titulo">Melodex</h1>
+    </div>
+    <p class="subtitulo">El buscador de cantantes: escribe un nombre y descubre su historia y sus canciones</p>
 
     <!-- Usamos un formulario (<form>) para que al presionar Enter también se busque -->
     <form id="formulario" class="buscador">
@@ -102,7 +106,7 @@
 
   <!-- ===== PIE DE PÁGINA ===== -->
   <footer class="pie">
-    Información de <a href="https://es.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>,
+    <strong>Melodex</strong> · Información de <a href="https://es.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>,
     <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> e
     <a href="https://music.apple.com" target="_blank" rel="noopener">iTunes</a>.
   </footer>

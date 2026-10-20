@@ -1,5 +1,5 @@
 /* ===========================================================
-   BUSCADOR DE CANTANTES - Lógica (script.js)
+   MELODEX - Buscador de cantantes - Lógica (script.js)
 
    ¿Qué hace este archivo?
    1. Espera a que la persona escriba un nombre y presione "Buscar" (o Enter).

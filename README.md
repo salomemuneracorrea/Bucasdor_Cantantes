@@ -1,4 +1,6 @@
-# 🎤 Buscador de Cantantes
+<p align="center"><img src="logo.svg" alt="Logo de Melodex" width="110"></p>
+
+# Melodex · Buscador de cantantes
 
 Página web para buscar cualquier cantante y ver, en un solo lugar:
 
@@ -15,7 +17,6 @@ Además:
 - **Sugerencias mientras escribes** (nombres de artistas de iTunes); al elegir una, busca de una vez.
 - **Botones de ejemplo** ("Prueba con: Shakira, Karol G…") y tus **últimas 5 búsquedas**, guardadas en el navegador.
 - **Botón "Copiar enlace"** para compartir la búsqueda.
-- **Modo oscuro** automático si el celular o el computador lo tiene activado.
 
 Cada sección aparece **solo si hay datos** para ese artista. Se puede buscar con el botón **Buscar** o presionando **Enter**, con o sin tildes y en mayúsculas o minúsculas ("dario gomez" encuentra a "Darío Gómez"). Si una de las fuentes de información falla, la página muestra lo que sí encontró.
 
@@ -34,7 +35,8 @@ Solo **HTML, CSS y JavaScript puro**: sin frameworks y sin instalar nada. Basta 
 
 | Archivo | Para qué sirve |
 |---|---|
-| `index.html` | Estructura de la página (título, buscador y tarjetas). |
+| `index.html` | Estructura de la página (logo, buscador y tarjetas). |
+| `logo.svg` | Logo de Melodex (micrófono y nota musical). También es el ícono de la pestaña. |
 | `style.css` | Diseño: colores, tarjetas y adaptación a celular, tablet y computador. |
 | `script.js` | Lógica: consulta las APIs y muestra los resultados. Está comentado paso a paso. |
 

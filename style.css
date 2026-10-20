@@ -1,5 +1,5 @@
 /* ===========================================================
-   BUSCADOR DE CANTANTES - Estilos (style.css)
+   MELODEX - Buscador de cantantes - Estilos (style.css)
    Aquí está TODO el diseño: colores, tamaños, espacios y cómo
    se acomodan las tarjetas en celular, tablet y computador.
    =========================================================== */
@@ -17,20 +17,6 @@
   --borde: #e6e1f5;
   --sombra: 0 8px 24px rgba(60, 30, 140, 0.10);
   --radio: 18px; /* qué tan redondeadas son las esquinas */
-}
-
-/* MODO OSCURO: si el celular o el computador tiene activado el modo oscuro,
-   solo cambiamos las variables de colores y todo lo demás se adapta solo. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --morado: #9d7cf5; /* un morado más claro para que se lea sobre fondo oscuro */
-    --fondo: #15121f;
-    --tarjeta: #221d33;
-    --texto: #f1eefa;
-    --texto-suave: #b3abc9;
-    --borde: #3a3352;
-    --sombra: 0 8px 24px rgba(0, 0, 0, 0.35);
-  }
 }
 
 /* ---------- 2. Reglas generales ---------- */
@@ -77,8 +63,25 @@ a {
   padding: 48px 16px 64px;
 }
 
+/* Logo y nombre, uno al lado del otro y centrados */
+.marca {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo {
+  width: clamp(48px, 10vw, 64px);
+  height: auto;
+  /* borde blanco suave para que el círculo resalte sobre el degradado */
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55);
+}
+
 .titulo {
   margin: 0;
+  letter-spacing: -0.5px;
   /* clamp(mínimo, ideal, máximo): el título crece con la pantalla */
   font-size: clamp(1.8rem, 5vw, 2.8rem);
 }
@@ -115,7 +118,7 @@ a {
   padding: 14px 26px;
   border: none;
   border-radius: 999px;
-  background: #1f1b2e; /* color fijo: no cambia con el modo oscuro */
+  background: var(--texto);
   color: #fff;
   font: inherit;
   font-weight: 600;
