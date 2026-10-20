@@ -3,7 +3,7 @@
 Página web para buscar cualquier cantante y ver, en un solo lugar:
 
 - **Foto, nombre y descripción corta**, con etiquetas de género, país y año de inicio, y botones a sus redes (Instagram, YouTube y Spotify).
-- **Biografía:** la introducción completa del artículo de Wikipedia (varios párrafos), con enlace para leer el artículo completo.
+- **Biografía:** los 2 primeros párrafos de Wikipedia, con un botón "Leer más" para ver toda la introducción y un enlace al artículo completo.
 - **Datos personales:** nombre real, fecha de nacimiento con su edad, lugar de nacimiento, fecha de fallecimiento (si aplica) y nacionalidad.
 - **Carrera:** géneros musicales, instrumentos, discográficas y desde qué año está activo.
 - **Premios:** hasta 5, primero los más conocidos (Grammy, Billboard, MTV…), con el año.
