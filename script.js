@@ -742,7 +742,7 @@ async function pedirNombres(codigos) {
    =========================================================== */
 
 /* Tarjeta 1: foto grande, nombre, descripción corta, datos clave
-   (género, país, activo desde), botones de redes y "Copiar enlace".
+   (género, país, activo desde) y botones de sus redes.
    Devuelve el nombre que mostró (para guardarlo en "Recientes"). */
 function mostrarPerfil(nombreBuscado, wikipedia, canciones, datos) {
   // Nombre: el de Wikipedia, o el de iTunes, o lo que escribió la persona.
@@ -794,12 +794,15 @@ function mostrarPerfil(nombreBuscado, wikipedia, canciones, datos) {
     htmlEtiquetas += `</ul>`;
   }
 
-  // Botones de sus redes (se abren en otra pestaña) y el de compartir.
-  let htmlBotones = `<div class="botones-perfil">`;
-  for (const red of datos.redes || []) {
-    htmlBotones += `<a class="boton-red" href="${escapar(red.url)}" target="_blank" rel="noopener">${red.icono} ${red.nombre}</a>`;
+  // Botones de sus redes (se abren en otra pestaña), solo si tiene.
+  let htmlBotones = "";
+  if (datos.redes && datos.redes.length > 0) {
+    htmlBotones = `<div class="botones-perfil">`;
+    for (const red of datos.redes) {
+      htmlBotones += `<a class="boton-red" href="${escapar(red.url)}" target="_blank" rel="noopener">${red.icono} ${red.nombre}</a>`;
+    }
+    htmlBotones += `</div>`;
   }
-  htmlBotones += `<button type="button" id="boton-compartir" class="boton-compartir">🔗 Copiar enlace</button></div>`;
 
   html += `
     <div>
@@ -810,20 +813,6 @@ function mostrarPerfil(nombreBuscado, wikipedia, canciones, datos) {
     </div>`;
 
   tarjetaPerfil.innerHTML = html;
-
-  // "Copiar enlace": copia la dirección de la página (que ya tiene ?q=NOMBRE)
-  // para pegarla en WhatsApp, por ejemplo.
-  const botonCompartir = document.getElementById("boton-compartir");
-  // Si el navegador no deja copiar, mostramos el enlace en una ventanita
-  // para que la persona lo copie a mano.
-  botonCompartir.addEventListener("click", function () {
-    const enlace = window.location.href;
-    navigator.clipboard.writeText(enlace).then(function () {
-      botonCompartir.textContent = "✅ ¡Enlace copiado!";
-    }).catch(function () {
-      window.prompt("Copia este enlace:", enlace);
-    });
-  });
 
   return nombre;
 }

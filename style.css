@@ -8,6 +8,7 @@
    Guardamos los colores en "variables" para poder cambiarlos
    en un solo lugar. Se usan así: var(--morado)            */
 :root {
+  color-scheme: only light; /* la página siempre es clara (ver index.html) */
   --morado: #6c3ce1;
   --rosado: #e83e8c;
   --fondo: #f4f2fb;
@@ -279,7 +280,7 @@ a {
   font-size: 0.9rem;
 }
 
-/* Fila de botones del perfil: redes y "Copiar enlace" */
+/* Fila de botones del perfil: sus redes */
 .botones-perfil {
   display: flex;
   flex-wrap: wrap;
@@ -288,20 +289,6 @@ a {
   margin-top: 16px;
 }
 
-.boton-compartir {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 999px;
-  background: var(--morado);
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.boton-compartir:hover {
-  background: var(--rosado);
-}
 
 .descripcion-cantante {
   margin: 8px 0 0;

@@ -12,6 +12,9 @@
   <meta charset="UTF-8">
   <!-- Esta línea hace que la página se adapte al tamaño del celular -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- La página es SOLO clara: así el navegador no la oscurece aunque el
+       celular o el computador estén en modo oscuro -->
+  <meta name="color-scheme" content="only light">
   <title>Melodex · Buscador de cantantes</title>
   <meta name="description" content="Busca cualquier cantante y conoce su foto, biografía, datos, carrera, premios, redes, canciones y álbumes.">
 
@@ -24,7 +27,9 @@
   <link rel="icon" href="logo.svg" type="image/svg+xml">
 
   <!-- Conectamos la hoja de estilos (el diseño de la página) -->
-  <link rel="stylesheet" href="style.css">
+  <!-- "?v=3" es la versión: al cambiarla, el navegador descarga el diseño
+       nuevo en vez de usar uno viejo guardado en su memoria -->
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
@@ -80,8 +85,7 @@
          y JavaScript lo muestra cuando hay algo que enseñar. -->
     <section id="resultados" class="resultados" hidden>
 
-      <!-- 1. Tarjeta principal: foto, nombre, descripción, datos clave,
-              redes y botón para compartir -->
+      <!-- 1. Tarjeta principal: foto, nombre, descripción, datos clave y redes -->
       <article id="tarjeta-perfil" class="tarjeta tarjeta-perfil"></article>
 
       <!-- 2. Biografía (introducción completa de Wikipedia) -->
@@ -112,6 +116,6 @@
   </footer>
 
   <!-- El JavaScript va al final para que la página ya esté cargada cuando se ejecute -->
-  <script src="script.js"></script>
+  <script src="script.js?v=3"></script>
 </body>
 </html>
